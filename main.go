@@ -10,7 +10,7 @@ import (
 	"go.huddl.one/rce/src/docker"
 )
 
-func help() {
+func DisplayHelpMenu() {
 	fmt.Println("Usage: ./rce <command>")
 	fmt.Println("Commands:")
 	fmt.Println("  serve - start the server")
@@ -33,9 +33,9 @@ func main() {
 	case "pull-images":
 		docker.PullImages()
 	case "help":
-		help()
+		DisplayHelpMenu()
 	default:
-		help()
+		DisplayHelpMenu()
 	}
 
 }

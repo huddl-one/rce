@@ -16,7 +16,7 @@ These instructions will get you a copy of the project up and running on your loc
 1. Clone the repository to your local machine using `git clone`.
 2. Navigate to the project directory.
 3. Install the necessary Go packages using `go get`.
-4. Build the project using `go build`.
+4. Build the project using `go build -tags netgo -ldflags '-s -w' -o rce`.
 
 ### Configuration
 
@@ -61,6 +61,20 @@ The API will execute the code and return a JSON object with the output:
 {
     "output": "Hello World"
 }
+```
+
+## Building Docker Images
+
+You can build the Docker images by running:
+
+```bash
+docker build -t huddl/rce .
+```
+
+You can run the Docker images by running:
+
+```bash
+docker run -it -p 8000:8000 -v "/var/run/docker.sock:/var/run/docker.sock" -v "/usr/src/app/runs:/usr/src/app/runs" huddl/rce
 ```
 
 ## Supported Languages

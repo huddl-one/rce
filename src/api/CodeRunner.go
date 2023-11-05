@@ -74,5 +74,5 @@ func Serve(PORT string) {
 	fmt.Println("Server running on port " + PORT)
 	fmt.Println("Visit http://localhost:" + PORT)
 	fmt.Println("Press CTRL+C to exit")
-	http.ListenAndServe(":"+PORT, router)
+	http.ListenAndServe("0.0.0.0:"+PORT, router)
 }

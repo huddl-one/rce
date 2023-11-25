@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -16,6 +18,36 @@ type Payload struct {
 	RunID    string `json:"runId"`
 	Code     string `json:"code"`
 	Language string `json:"language"`
+}
+
+type TestResult struct {
+	Passed   bool        `json:"passed"`
+	Input    interface{} `json:"input"` // Use interface{} to handle various input types
+	Expected interface{} `json:"expected"`
+	Output   interface{} `json:"output"`
+	Error    string      `json:"error"`
+}
+
+type DockerOutput struct {
+	TestResults []TestResult `json:"testResults"`
+}
+
+func cleanAndFormatOutput(rawOutput []byte) (string, error) {
+	// Convert raw output to string
+	outputString := string(rawOutput)
+
+	// Remove control characters and unneeded parts
+	cleanedOutput := removeControlCharacters(outputString)
+
+	// Return the cleaned and formatted JSON string
+	return cleanedOutput, nil
+}
+
+func removeControlCharacters(output string) string {
+	// Regex to match control characters
+	re := regexp.MustCompile(`[\x00-\x1F\x7F]|\x1B\[.*?m`)
+	// Replace all matches with empty string
+	return re.ReplaceAllString(output, "")
 }
 
 func ExecuteCode(res http.ResponseWriter, req *http.Request) {
@@ -39,21 +71,63 @@ func ExecuteCode(res http.ResponseWriter, req *http.Request) {
 		fmt.Println(filePath)
 
 		// convert the output to json
-		output, err := json.Marshal(map[string]string{
-			"output": string(docker.RunContainer(filePath, payload.Language, runId)),
-			"runId":  runId,
-		})
+		// output, err := json.Marshal(map[string]string{
+		// 	"output": string(docker.RunContainer(filePath, payload.Language, runId)),
+		// 	"runId":  runId,
+		// })
+		// if err != nil {
+		// 	panic(err)
+		// }
+
+		containerOutput := docker.RunContainer(filePath, payload.Language, runId)
+
+		var results DockerOutput
+		err1 := json.Unmarshal(containerOutput, &results)
+		if err1 != nil {
+			// Output is not JSON - likely an error message
+			handlePlainTextOutput(res, containerOutput)
+			return
+		}
+
+		jsonResponse, _ := json.Marshal(results)
+		formattedOutput, err := cleanAndFormatOutput(jsonResponse)
 		if err != nil {
-			panic(err)
+			http.Error(res, "Error formatting output: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		// set the content type to json, enable CORS and write the output
 		res.Header().Set("Content-Type", "application/json")
 		res.Header().Set("Access-Control-Allow-Origin", "*")
-		res.Write(output)
+		res.Write([]byte(formattedOutput))
 	case http.MethodGet:
 		res.Write([]byte("Hello World"))
 	}
+}
+
+func handlePlainTextOutput(res http.ResponseWriter, output []byte) {
+	outputStr := string(output)
+
+	// Check for common syntax error patterns
+	if strings.Contains(outputStr, "SyntaxError") || strings.Contains(outputStr, "syntax error") {
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(http.StatusBadRequest) // Bad Request for syntax errors
+		res.Write([]byte("Syntax error detected: " + outputStr))
+		return
+	}
+
+	// Check for common runtime error patterns
+	if strings.Contains(outputStr, "RuntimeError") || strings.Contains(outputStr, "runtime error") {
+		res.Header().Set("Content-Type", "text/plain")
+		res.WriteHeader(http.StatusInternalServerError) // Internal Server Error for runtime errors
+		res.Write([]byte("Runtime error detected: " + outputStr))
+		return
+	}
+
+	// If no specific error patterns are identified, respond with a generic error message
+	res.Header().Set("Content-Type", "text/plain")
+	res.WriteHeader(http.StatusInternalServerError)
+	res.Write([]byte("Error lmao: " + outputStr))
 }
 
 func Serve(PORT string) {

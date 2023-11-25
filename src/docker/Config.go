@@ -32,9 +32,9 @@ func generateRunCommandForLanguage(language string, filePath string) []string {
 	case "python":
 		return []string{"python", filePath}
 	case "c":
-		return []string{"bash", "-c", "gcc " + filePath + " -o " + filePathParts[0] + " && " + filePathParts[0]}
+		return []string{"bash", "-c", "gcc " + filePath + " -o " + filePathParts[0] + " && " + "./" + filePathParts[0]}
 	case "cpp":
-		return []string{"bash", "-c", "g++ " + filePath + " -o " + filePathParts[0] + " && " + filePathParts[0]}
+		return []string{"bash", "-c", "g++ " + filePath + " -o " + filePathParts[0] + " && " + "./" + filePathParts[0]}
 	case "javascript":
 		return []string{"node", filePath}
 	case "java":

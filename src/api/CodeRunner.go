@@ -127,7 +127,7 @@ func handlePlainTextOutput(res http.ResponseWriter, output []byte) {
 	// If no specific error patterns are identified, respond with a generic error message
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusInternalServerError)
-	res.Write([]byte("Error lmao: " + outputStr))
+	res.Write([]byte(outputStr))
 }
 
 func Serve(PORT string) {
